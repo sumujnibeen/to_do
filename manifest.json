@@ -1,6 +1,6 @@
 {
-  "name": "Clock & Tasks",
-  "short_name": "My Clock",
+  "name": "To Do",
+  "short_name": "To Do",
   "description": "Circular clock with todo list",
   "start_url": "./index.html",
   "display": "standalone",
