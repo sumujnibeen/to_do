@@ -116,6 +116,7 @@
   .task-btn.del-btn      { color:var(--red); }
   .task-btn.undo-done-btn{ color:var(--blue2); font-size:15px; }
   .task-btn.perm-del-btn { color:#ff6666; font-size:15px; }
+  .task-btn.edit-btn     { color:#aaaaff; font-size:13px; }
 
   /* FAB */
   #fab-area { position:fixed; bottom:20px; left:16px; display:flex; gap:10px; align-items:center; z-index:200; }
@@ -375,7 +376,7 @@
 <div id="sheet-overlay">
   <div id="bottom-sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-label">New Task</div>
+    <div class="sheet-label" id="sheet-mode-label">New Task</div>
     <input type="text" id="sheet-title" placeholder="What needs to be done?" maxlength="60">
     <div>
       <div class="sheet-label" style="margin-bottom:6px">Deadline (তারিখ ও সময়)</div>
@@ -494,7 +495,8 @@ function render(){
     const actionBtns = task.done
       ? `<button class="task-btn undo-done-btn" data-action="undone" data-idx="${idx}" title="ফিরিয়ে আনুন">↩</button>
          <button class="task-btn perm-del-btn"  data-action="del"    data-idx="${idx}" title="চিরতরে মুছুন">🗑</button>`
-      : `<button class="task-btn done-btn" data-action="done" data-idx="${idx}" title="Complete">✓</button>
+      : `<button class="task-btn edit-btn"  data-action="edit" data-idx="${idx}" title="Edit">✏️</button>
+         <button class="task-btn done-btn" data-action="done" data-idx="${idx}" title="Complete">✓</button>
          <button class="task-btn del-btn"  data-action="del"  data-idx="${idx}" title="Delete">✕</button>`;
     const moveBtns = sortMode==='manual'
       ? `<div class="move-btns">
@@ -612,7 +614,8 @@ document.getElementById('undo-btn').addEventListener('click',()=>{
 document.getElementById('task-list').addEventListener('click',e=>{
   const btn=e.target.closest('[data-action]'); if(!btn) return;
   const action=btn.dataset.action, idx=parseInt(btn.dataset.idx);
-  if(action==='done'){ showConfirm(idx,'done'); }
+  if(action==='edit'){ openEditSheet(idx); }
+  else if(action==='done'){ showConfirm(idx,'done'); }
   else if(action==='undone'){ showConfirm(idx,'undone'); }
   else if(action==='del'){ showConfirm(idx,'del'); }
   else if(action==='up'&&idx>0){
@@ -647,22 +650,53 @@ const overlay   =document.getElementById('sheet-overlay');
 const sheetTitle=document.getElementById('sheet-title');
 const sheetDead =document.getElementById('sheet-deadline');
 
+// ── EDIT TASK ──
+let editingIdx = null;
+
+function openEditSheet(idx){
+  editingIdx = idx;
+  const task = tasks[idx];
+  sheetTitle.value = task.title;
+  // Convert stored datetime to local datetime-local format
+  const d = new Date(task.deadline);
+  const local = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  sheetDead.value = local;
+  document.getElementById('sheet-mode-label').textContent = 'Edit Task';
+  document.getElementById('sheet-save').textContent = 'Update Task';
+  overlay.classList.add('open');
+  setTimeout(()=>sheetTitle.focus(),300);
+}
+
 document.getElementById('fab').addEventListener('click',()=>{
   sheetTitle.value='';
+  editingIdx = null;
   const now = new Date();
-  now.setMinutes(now.getMinutes() + 60); // default: 1 hour from now
+  now.setMinutes(now.getMinutes() + 60);
   const local = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
   sheetDead.value = local;
+  document.getElementById('sheet-mode-label').textContent = 'New Task';
+  document.getElementById('sheet-save').textContent = 'Save Task';
   overlay.classList.add('open');
   setTimeout(()=>sheetTitle.focus(),300);
 });
-function closeSheet(){ overlay.classList.remove('open'); }
+function closeSheet(){
+  overlay.classList.remove('open');
+  editingIdx = null;
+  document.getElementById('sheet-mode-label').textContent = 'New Task';
+  document.getElementById('sheet-save').textContent = 'Save Task';
+}
 document.getElementById('sheet-cancel').addEventListener('click',closeSheet);
 overlay.addEventListener('click',e=>{ if(e.target===overlay) closeSheet(); });
 document.getElementById('sheet-save').addEventListener('click',()=>{
   const title=sheetTitle.value.trim(), dl=sheetDead.value;
   if(!title||!dl) return;
-  tasks.push({id:Date.now(),title,deadline:dl,done:false});
+  if(editingIdx !== null){
+    tasks[editingIdx].title    = title;
+    tasks[editingIdx].deadline = dl;
+    editingIdx = null;
+  } else {
+    tasks.push({id:Date.now(),title,deadline:dl,done:false});
+  }
   save(); render(); closeSheet();
 });
 sheetTitle.addEventListener('keydown',e=>{ if(e.key==='Enter') sheetDead.focus(); });
@@ -707,10 +741,13 @@ if(installBanner){
 // ── EMPTY STATE TAP ──
 document.getElementById('empty-state').addEventListener('click',()=>{
   sheetTitle.value='';
+  editingIdx = null;
   const now2 = new Date();
   now2.setMinutes(now2.getMinutes() + 60);
   const local2 = new Date(now2.getTime() - now2.getTimezoneOffset()*60000).toISOString().slice(0,16);
   sheetDead.value = local2;
+  document.getElementById('sheet-mode-label').textContent = 'New Task';
+  document.getElementById('sheet-save').textContent = 'Save Task';
   overlay.classList.add('open');
   setTimeout(()=>sheetTitle.focus(),300);
 });
