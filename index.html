@@ -237,8 +237,36 @@
   #signature {
     position:fixed; bottom:8px; right:12px;
     font-family:'Pacifico',cursive; font-size:12px;
-    color:#1e3060; pointer-events:none; z-index:999;
+    color:#1e3060; pointer-events:auto; z-index:999;
+    cursor:pointer; transition:color .2s;
+    user-select:none;
   }
+  #signature:hover, #signature:active { color:#2a4a90; }
+
+  /* SIGNATURE EDIT POPUP */
+  #sig-popup {
+    position:fixed; bottom:30px; right:12px;
+    background:#08080f; border:1px solid #1a2a50;
+    border-radius:12px; padding:10px;
+    display:none; flex-direction:column; gap:8px;
+    z-index:1000; box-shadow:0 0 20px rgba(0,0,0,.9);
+    min-width:200px;
+  }
+  #sig-popup.open { display:flex; }
+  #sig-input {
+    background:#0d1525; border:1px solid #1a2a50;
+    border-radius:8px; color:#cdd8f0;
+    padding:8px 10px; font-family:'Rajdhani',monospace;
+    font-size:14px; outline:none; width:100%;
+  }
+  #sig-input:focus { border-color:#2255aa; }
+  #sig-save {
+    background:#0e2870; border:1px solid #2255aa;
+    border-radius:8px; color:#00bfff;
+    font-family:'Rajdhani',monospace; font-size:13px;
+    font-weight:700; padding:7px; cursor:pointer;
+  }
+  #sig-save:active { background:#1a3a90; }
   /* INSTALL BANNER */
   #install-banner {
     position:fixed; bottom:72px; left:50%; transform:translateX(-50%);
@@ -329,7 +357,11 @@
 
 <!-- SIGNATURE -->
 <div id="install-banner">📲 <span>Add to Home Screen</span> করুন</div>
-<div id="signature">Shafiul Mujnibeen</div>
+<div id="signature">Add ur name</div>
+<div id="sig-popup">
+  <input type="text" id="sig-input" placeholder="তোমার নাম লেখো..." maxlength="30">
+  <button id="sig-save">Save</button>
+</div>
 
 <script>
 // ══════ CLOCK ══════
@@ -603,6 +635,38 @@ if(installBanner){
     installBanner.style.display = 'none';
   });
 }
+// ── SIGNATURE EDIT ──
+const sigEl    = document.getElementById('signature');
+const sigPopup = document.getElementById('sig-popup');
+const sigInput = document.getElementById('sig-input');
+
+// Load saved name
+const savedName = localStorage.getItem('smSignature');
+if(savedName) sigEl.textContent = savedName;
+
+sigEl.addEventListener('click', e=>{
+  e.stopPropagation();
+  sigInput.value = sigEl.textContent === 'Add ur name' ? '' : sigEl.textContent;
+  sigPopup.classList.toggle('open');
+  if(sigPopup.classList.contains('open')) setTimeout(()=>sigInput.focus(), 100);
+});
+
+document.getElementById('sig-save').addEventListener('click',()=>{
+  const name = sigInput.value.trim();
+  sigEl.textContent = name || 'Add ur name';
+  if(name) localStorage.setItem('smSignature', name);
+  else localStorage.removeItem('smSignature');
+  sigPopup.classList.remove('open');
+});
+
+sigInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('sig-save').click();
+});
+
+document.addEventListener('click', e=>{
+  if(!sigPopup.contains(e.target) && e.target !== sigEl)
+    sigPopup.classList.remove('open');
+});
 </script>
 </body>
 </html>
