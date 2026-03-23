@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-512.png">
+<meta name="apple-mobile-web-app-title" content="My Clock">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <title>Clock & Tasks</title>
@@ -236,6 +239,21 @@
     font-family:'Pacifico',cursive; font-size:12px;
     color:#1e3060; pointer-events:none; z-index:999;
   }
+  /* INSTALL BANNER */
+  #install-banner {
+    position:fixed; bottom:72px; left:50%; transform:translateX(-50%);
+    background:#0d1f44; border:1px solid #2255aa; color:#7eb8ff;
+    padding:9px 20px; border-radius:30px; font-size:12px;
+    font-family:'Rajdhani',monospace; font-weight:600;
+    cursor:pointer; z-index:999; white-space:nowrap;
+    box-shadow:0 0 20px rgba(34,102,255,.4); display:none;
+    animation:fadeInBanner .4s ease;
+  }
+  #install-banner span { color:#00bfff; }
+  @keyframes fadeInBanner {
+    from{opacity:0;transform:translateX(-50%) translateY(10px)}
+    to{opacity:1;transform:translateX(-50%) translateY(0)}
+  }
 </style>
 </head>
 <body>
@@ -310,6 +328,7 @@
 </div>
 
 <!-- SIGNATURE -->
+<div id="install-banner">📲 <span>Add to Home Screen</span> করুন</div>
 <div id="signature">Shafiul Mujnibeen</div>
 
 <script>
@@ -549,6 +568,41 @@ sheetTitle.addEventListener('keydown',e=>{ if(e.key==='Enter') sheetDead.focus()
 
 render();
 setInterval(render,60000);
+
+// ── SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ── WAKE LOCK (screen stays on) ──
+async function keepAwake(){
+  try{ if('wakeLock' in navigator) await navigator.wakeLock.request('screen'); }catch(e){}
+}
+keepAwake();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible') keepAwake();
+});
+
+// ── INSTALL PROMPT ──
+let deferredPrompt;
+const installBanner = document.getElementById('install-banner');
+if(installBanner){
+  window.addEventListener('beforeinstallprompt', e=>{
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.style.display = 'block';
+  });
+  installBanner.addEventListener('click', async ()=>{
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBanner.style.display = 'none';
+  });
+  window.addEventListener('appinstalled', ()=>{
+    installBanner.style.display = 'none';
+  });
+}
 </script>
 </body>
 </html>
