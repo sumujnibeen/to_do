@@ -267,6 +267,35 @@
     font-weight:700; padding:7px; cursor:pointer;
   }
   #sig-save:active { background:#1a3a90; }
+  /* EMPTY STATE */
+  #empty-state {
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    flex:1;
+    gap:10px;
+    cursor:pointer;
+    padding-bottom:60px;
+  }
+  #empty-state.show { display:flex; }
+  #empty-state-text {
+    font-family:'Pacifico',cursive;
+    font-size:16px;
+    color:#1e3060;
+    text-align:center;
+    line-height:1.6;
+    transition:color .2s;
+  }
+  #empty-state:active #empty-state-text { color:#2a50a0; }
+  #empty-plus {
+    font-size:36px;
+    color:#0e2870;
+    line-height:1;
+    transition:color .2s;
+  }
+  #empty-state:active #empty-plus { color:#2266ff; }
+
   /* INSTALL BANNER */
   #install-banner {
     position:fixed; bottom:72px; left:50%; transform:translateX(-50%);
@@ -305,6 +334,10 @@
 <!-- TASK LIST -->
 <div id="todo-section">
   <div id="task-list"></div>
+  <div id="empty-state" id="empty-state">
+    <div id="empty-plus">+</div>
+    <div id="empty-state-text">Add ur to do list</div>
+  </div>
 </div>
 
 <!-- FAB AREA -->
@@ -458,6 +491,14 @@ function render(){
   });
   document.getElementById('opt-deadline').className='sort-opt'+(sortMode==='deadline'?' active':'');
   document.getElementById('opt-manual').className  ='sort-opt'+(sortMode==='manual'  ?' active':'');
+
+  // empty state
+  const emptyState = document.getElementById('empty-state');
+  if(tasks.length === 0){
+    emptyState.classList.add('show');
+  } else {
+    emptyState.classList.remove('show');
+  }
 }
 
 // ══════ CONFIRM + UNDO ══════
@@ -635,6 +676,14 @@ if(installBanner){
     installBanner.style.display = 'none';
   });
 }
+// ── EMPTY STATE TAP ──
+document.getElementById('empty-state').addEventListener('click',()=>{
+  sheetTitle.value='';
+  sheetDead.value=new Date().toISOString().split('T')[0];
+  overlay.classList.add('open');
+  setTimeout(()=>sheetTitle.focus(),300);
+});
+
 // ── SIGNATURE EDIT ──
 const sigEl    = document.getElementById('signature');
 const sigPopup = document.getElementById('sig-popup');
