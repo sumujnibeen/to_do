@@ -378,8 +378,8 @@
     <div class="sheet-label">New Task</div>
     <input type="text" id="sheet-title" placeholder="What needs to be done?" maxlength="60">
     <div>
-      <div class="sheet-label" style="margin-bottom:6px">Deadline</div>
-      <input type="date" id="sheet-deadline">
+      <div class="sheet-label" style="margin-bottom:6px">Deadline (তারিখ ও সময়)</div>
+      <input type="datetime-local" id="sheet-deadline">
     </div>
     <div class="sheet-btns">
       <button id="sheet-cancel">Cancel</button>
@@ -432,30 +432,55 @@ let tasks   =JSON.parse(localStorage.getItem('smTasks')||'[]');
 let sortMode=localStorage.getItem('smSort')||'deadline';
 function save(){ localStorage.setItem('smTasks',JSON.stringify(tasks)); }
 
+function minsLeft(dl){
+  return Math.round((new Date(dl) - new Date()) / 60000);
+}
 function daysLeft(dl){
-  const now=new Date(); now.setHours(0,0,0,0);
-  return Math.round((new Date(dl)-now)/864e5);
+  // kept for sort compatibility — returns days (float)
+  return (new Date(dl) - new Date()) / 864e5;
 }
 function urgencyClass(t){
   if(t.done) return 'done';
-  const d=daysLeft(t.deadline);
-  if(d<=1) return 'urgent'; if(d<=3) return 'warning'; return 'safe';
+  const m=minsLeft(t.deadline);
+  if(m <= 24*60) return 'urgent';   // within 24 hours
+  if(m <= 3*24*60) return 'warning'; // within 3 days
+  return 'safe';
 }
 function daysLabel(t){
   if(t.done) return '✓ Done';
-  const d=daysLeft(t.deadline);
-  if(d<0) return `${Math.abs(d)}d overdue!`;
-  if(d===0) return 'Due today!'; if(d===1) return '1 day left';
-  return `${d} days left`;
+  const total = minsLeft(t.deadline);
+  if(total < 0){
+    const abs = Math.abs(total);
+    const d = Math.floor(abs / (60*24));
+    const h = Math.floor((abs % (60*24)) / 60);
+    const m = abs % 60;
+    if(d > 0) return `${d}d ${h}h overdue!`;
+    if(h > 0) return `${h}h ${m}m overdue!`;
+    return `${m}m overdue!`;
+  }
+  const d = Math.floor(total / (60*24));
+  const h = Math.floor((total % (60*24)) / 60);
+  const m = total % 60;
+  if(d > 0 && h > 0) return `${d}d ${h}h বাকি`;
+  if(d > 0) return `${d} দিন বাকি`;
+  if(h > 0) return `${h}h ${m}m বাকি`;
+  if(m > 0) return `${m} মিনিট বাকি`;
+  return 'এখনই!';
 }
 function sorted(){
   if(sortMode==='deadline'){
     return [...tasks].sort((a,b)=>{
       if(a.done!==b.done) return a.done?1:-1;
-      return daysLeft(a.deadline)-daysLeft(b.deadline);
+      return minsLeft(a.deadline)-minsLeft(b.deadline);
     });
   }
   return [...tasks];
+}
+function formatDeadline(dl){
+  const d = new Date(dl);
+  const date = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+  const time = d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  return `${date} ${time}`;
 }
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -481,7 +506,7 @@ function render(){
       <div class="task-info">
         <div class="task-title">${esc(task.title)}</div>
         <div class="task-meta">
-          <span class="task-deadline">📅 ${task.deadline}</span>
+          <span class="task-deadline">📅 ${formatDeadline(task.deadline)}</span>
           <span class="days-left">${daysLabel(task)}</span>
         </div>
       </div>
@@ -624,7 +649,10 @@ const sheetDead =document.getElementById('sheet-deadline');
 
 document.getElementById('fab').addEventListener('click',()=>{
   sheetTitle.value='';
-  sheetDead.value=new Date().toISOString().split('T')[0];
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 60); // default: 1 hour from now
+  const local = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  sheetDead.value = local;
   overlay.classList.add('open');
   setTimeout(()=>sheetTitle.focus(),300);
 });
@@ -640,7 +668,7 @@ document.getElementById('sheet-save').addEventListener('click',()=>{
 sheetTitle.addEventListener('keydown',e=>{ if(e.key==='Enter') sheetDead.focus(); });
 
 render();
-setInterval(render,60000);
+setInterval(render,30000);
 
 // ── SERVICE WORKER ──
 if('serviceWorker' in navigator){
@@ -679,7 +707,10 @@ if(installBanner){
 // ── EMPTY STATE TAP ──
 document.getElementById('empty-state').addEventListener('click',()=>{
   sheetTitle.value='';
-  sheetDead.value=new Date().toISOString().split('T')[0];
+  const now2 = new Date();
+  now2.setMinutes(now2.getMinutes() + 60);
+  const local2 = new Date(now2.getTime() - now2.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  sheetDead.value = local2;
   overlay.classList.add('open');
   setTimeout(()=>sheetTitle.focus(),300);
 });
